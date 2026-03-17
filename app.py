@@ -8,13 +8,13 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_socketio import SocketIO, emit
 
-# အရင်ဆုံး App နဲ့ Folder Path တွေကို သတ်မှတ်ပါ
+# အခြေခံ Setting များ သတ်မှတ်ခြင်း
 base_dir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mysecret123'
-app.config['UPLOAD_FOLDER'] = os.path.join(os.path.abspath(os.path.dirname(file)), 'static/uploads')
+app.config['UPLOAD_FOLDER'] = os.path.join(base_dir, 'static/uploads')
 
-# Database Link ကို ယူခြင်း (သင်ရေးထားတဲ့ အပိုင်း - မှန်ပါတယ်)
+# Database ချိတ်ဆက်မှု (Supabase သုံးရန်)
 db_url = os.environ.get('DATABASE_URL')
 if db_url:
     if db_url.startswith("postgres://"):
@@ -23,15 +23,13 @@ if db_url:
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(base_dir, 'database.db')
 
-# Upload folder ရှိမရှိ စစ်ဆေးခြင်း (သင်ရေးထားတဲ့ အပိုင်း - မှန်ပါတယ်)
+# Upload folder မရှိရင် ဆောက်ပေးမယ်
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
-
-# max_http_buffer_size ကို 10MB အထိ တိုးလိုက်ပါတယ် (ဒါမှ ပုံပို့လို့ရမှာပါ)
 socketio = SocketIO(app, cors_allowed_origins="*", max_http_buffer_size=10 * 1024 * 1024)
 
 online_users = {}
@@ -96,34 +94,32 @@ def handle_message(data):
         'type': 'text'
     }, broadcast=True)
 
-# ဖိုင်ပို့တဲ့ Event
 @socketio.on('file_upload')
 def handle_file(data):
     try:
-        file_name = data['filename']
-        file_data = data['content']
+        f_name = data['filename']  # 'file' ဆိုတဲ့ နာမည်ကို ရှောင်ရန် f_name လို့ သုံးထားပါတယ်
+        f_content = data['content']
         time_str = datetime.now().strftime("%I:%M %p")
         
-        # Base64 ကို decode လုပ်မယ်
-        header, encoded = file_data.split(",", 1)
+        header, encoded = f_content.split(",", 1)
         file_bytes = base64.b64decode(encoded)
         
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], file_name)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], f_name)
         with open(filepath, "wb") as f:
             f.write(file_bytes)
         
-        file_url = url_for('static', filename='uploads/' + file_name)
+        file_url = url_for('static', filename='uploads/' + f_name)
         emit('message', {
             'user': current_user.username, 
             'message': file_url, 
-            'filename': file_name,
+            'filename': f_name,
             'time': time_str,
             'type': 'file'
         }, broadcast=True)
     except Exception as e:
-        print(f"Error uploading file: {e}")
+        print(f"Error: {e}")
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    socketio.run(app, debug=True, port=5000)
+    socketio.run(app, debug=True, port=10000)
