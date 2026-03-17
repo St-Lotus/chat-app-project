@@ -5,11 +5,15 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_socketio import SocketIO, emit
 
-base_dir = os.path.abspath(os.path.dirname(__file__))
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'mysecret123'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(base_dir, 'database.db')
-app.config['UPLOAD_FOLDER'] = os.path.join(base_dir, 'static/uploads')
+db_url = os.environ.get('DATABASE_URL')
+
+if db_url:
+    # SQLAlchemy က postgres:// ကို လက်မခံဘဲ postgresql:// ကိုပဲ လက်ခံလို့ ပြင်ပေးရတာပါ
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(base_dir, 'database.db')
 
 # Upload folder မရှိရင် ဆောက်မယ်
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
