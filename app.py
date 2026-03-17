@@ -9,7 +9,7 @@ from flask_socketio import SocketIO, emit
 base_dir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mysecret123'
-app.config['UPLOAD_FOLDER'] = os.path.join(base_dir, 'static/uploads')
+app.config['UPLOAD_FOLDER'] = os.path.join(os.path.abspath(os.path.dirname(file)), 'static/uploads')
 
 # Database Link ကို ယူခြင်း (သင်ရေးထားတဲ့ အပိုင်း - မှန်ပါတယ်)
 db_url = os.environ.get('DATABASE_URL')
