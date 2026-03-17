@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>St. Lotus Chat</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root { --primary: #075e54; --light: #dcf8c6; }
+        body { font-family: 'Segoe UI', sans-serif; background: #e5ddd5; margin: 0; display: flex; height: 100vh; }
+        
+        /* Sidebar for Active Users */
+        .sidebar { width: 200px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 15px; background: #eee; font-weight: bold; font-size: 14px; }
+        #user-list { list-style: none; padding: 0; margin: 0; flex: 1; overflow-y: auto; }
+        #user-list li { padding: 10px 15px; border-bottom: 1px solid #f0f0f0; font-size: 13px; color: #333; }
+        #user-list li::before { content: "● "; color: #4CAF50; }
+
+        .main-chat { flex: 1; display: flex; flex-direction: column; background: white; max-width: 600px; margin: auto; height: 100vh; }
+        .header { background: var(--primary); color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; }
+        .logout-btn { color: #ffbcbc; text-decoration: none; font-size: 13px; }
+
+        #chat { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
+        .msg { padding: 6px 10px; border-radius: 8px; max-width: 80%; position: relative; font-size: 14px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+        .sent { background: var(--light); align-self: flex-end; }
+        .received { background: white; align-self: flex-start; }
+        
+        .msg-info { display: flex; justify-content: space-between; gap: 10px; align-items: flex-end; margin-top: 4px; }
+        .time { font-size: 10px; color: #888; }
+        .del-btn { cursor: pointer; color: #ff5252; font-size: 12px; display: none; }
+        .sent:hover .del-btn { display: inline; }
+
+        .input-area { padding: 10px; background: #f0f0f0; display: flex; flex-direction: column; }
+        .emoji-bar { padding: 5px; display: flex; gap: 10px; font-size: 18px; cursor: pointer; }
+        .controls { display: flex; gap: 8px; align-items: center; }
+        input { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid #ddd; outline: none; }
+        
+        @media (max-width: 600px) { .sidebar { display: none; } }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">Online Users</div>
+        <ul id="user-list"></ul>
+    </div>
+
+    <div class="main-chat">
+        <div class="header">
+            <span>{{ user.username }}</span>
+            <a href="/logout" class="logout-btn">Logout</a>
+        </div>
+        
+        <div id="chat"></div>
+
+        <div class="input-area">
+            <div class="emoji-bar">
+                <span onclick="addEmoji('😊')">😊</span><span onclick="addEmoji('😂')">😂</span>
+                <span onclick="addEmoji('❤️')">❤️</span><span onclick="addEmoji('👍')">👍</span>
+                <span onclick="addEmoji('🙏')">🙏</span><span onclick="addEmoji('😮')">😮</span>
+            </div>
+            <div class="controls">
+                <input id="message" type="text" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMessage()">
+                <button onclick="sendMessage()" style="border:none; background:none; font-size:20px; cursor:pointer;">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var socket = io();
+        var myName = "{{ user.username }}";
+
+        socket.on('user_list', function(users) {
+            var list = document.getElementById('user-list');
+            list.innerHTML = users.map(u => `<li>${u}</li>`).join('');
+        });
+
+        socket.on('message', function(data) {
+            var chat = document.getElementById('chat');
+            var div = document.createElement('div');
+            div.className = 'msg ' + (data.user === myName ? 'sent' : 'received');
+            div.id = 'msg-' + data.id;
+            
+            div.innerHTML = `
+                <div style="font-weight:bold; font-size:11px; color:#555">${data.user}</div>
+                <div>${data.message}</div>
+                <div class="msg-info">
+                    <span class="time">${data.time}</span>
+                    ${data.user === myName ? `<span class="del-btn" onclick="deleteMsg('${data.id}')">🗑️</span>` : ''}
+                </div>
+            `;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        });
+
+        socket.on('msg_deleted', function(id) {
+            var el = document.getElementById('msg-' + id);
+            if(el) el.innerHTML = `<i style="color:#888; font-size:12px;">Message deleted</i>`;
+        });
+
+        function sendMessage() {
+            var input = document.getElementById('message');
+            if(input.value.trim()) {
+                socket.emit('message', {message: input.value});
+                input.value = '';
+            }
+        }
+
+        function addEmoji(emoji) {
+            document.getElementById('message').value += emoji;
+        }
+
+        function deleteMsg(id) {
+            if(confirm('Delete this message?')) {
+                socket.emit('delete_msg', {id: id});
+            }
+        }
+    </script>
+</body>
+</html>
