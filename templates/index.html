@@ -77,18 +77,26 @@
             var chat = document.getElementById('chat');
             var div = document.createElement('div');
             div.className = 'msg ' + (data.user === myName ? 'sent' : 'received');
-            div.id = 'msg-' + data.id;
-            
-            div.innerHTML = `
-                <div style="font-weight:bold; font-size:11px; color:#555">${data.user}</div>
-                <div>${data.message}</div>
-                <div class="msg-info">
-                    <span class="time">${data.time}</span>
-                    ${data.user === myName ? `<span class="del-btn" onclick="deleteMsg('${data.id}')">🗑️</span>` : ''}
-                </div>
-            `;
-            chat.appendChild(div);
-            chat.scrollTop = chat.scrollHeight;
+    
+            let content = `<span class="user-tag">${data.user}</span>`;
+    
+            // ဖိုင်ပို့တာလား စစ်ဆေးမယ်
+            if (data.type === 'file') {
+                const ext = data.filename.split('.').pop().toLowerCase();
+                // ပုံဆိုရင် ပုံအတိုင်း ပြမယ်
+            if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) {
+                content += `<img src="${data.message}" style="max-width:100%; border-radius:5px;">`;
+            } else {
+                // တခြားဖိုင်ဆိုရင် Download Link ပေးမယ်
+                content += `<a href="${data.message}" target="_blank" style="color:#075e54;">📄 ${data.filename}</a>`;
+            }
+        } else {
+            content += data.message;
+        }
+    
+        div.innerHTML = content;
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
         });
 
         socket.on('msg_deleted', function(id) {
