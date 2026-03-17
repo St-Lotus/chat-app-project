@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 import os, base64
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash
