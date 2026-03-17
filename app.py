@@ -19,9 +19,12 @@ db_url = os.environ.get('DATABASE_URL')
 if db_url:
     if db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql://", 1)
+    
+    # SSL mode ထည့်သွင်းခြင်း (ဒါမှ Supabase နဲ့ ချိတ်တာ ပိုစင်မှာပါ)
+    if "?" not in db_url:
+        db_url += "?sslmode=require"
+        
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
-else:
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(base_dir, 'database.db')
 
 # Upload folder မရှိရင် ဆောက်ပေးမယ်
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
