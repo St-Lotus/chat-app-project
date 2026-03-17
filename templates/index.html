@@ -94,9 +94,9 @@
             content += data.message;
         }
     
-        div.innerHTML = content;
-        chat.appendChild(div);
-        chat.scrollTop = chat.scrollHeight;
+            div.innerHTML = content;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
         });
 
         socket.on('msg_deleted', function(id) {
