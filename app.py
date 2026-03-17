@@ -35,6 +35,7 @@ socketio = SocketIO(app, cors_allowed_origins="*", max_http_buffer_size=10 * 102
 online_users = {}
 
 class User(UserMixin, db.Model):
+    __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     phone = db.Column(db.String(20), unique=True, nullable=False)
     username = db.Column(db.String(50), nullable=False)
