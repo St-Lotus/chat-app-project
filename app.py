@@ -14,6 +14,10 @@ app.config['SECRET_KEY'] = 'mysecret123'
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static/uploads')
 
 # Render ရဲ့ Env Variables ထဲမှာ MONGO_URI ဆိုပြီး Link ကို ထည့်ပေးထားရပါမယ်
+mongo_uri = os.environ.get('MONGO_URI')
+if not mongo_uri:
+# Render မှာ variable မရှိရင် တက်မလာအောင် error message ထုတ်ခိုင်းမယ်
+raise ValueError("MONGO_URI is not set in Render Environment Variables")
 app.config["MONGO_URI"] = os.environ.get('MONGO_URI')
 mongo = PyMongo(app)
 
