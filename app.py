@@ -4,49 +4,40 @@ eventlet.monkey_patch()
 import os, base64
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_socketio import SocketIO, emit
+from flask_pymongo import PyMongo
+from bson.objectid import ObjectId
 
-# အခြေခံ Setting များ သတ်မှတ်ခြင်း
-base_dir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mysecret123'
-app.config['UPLOAD_FOLDER'] = os.path.join(base_dir, 'static/uploads')
+app.config['UPLOAD_FOLDER'] = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static/uploads')
 
-# Database ချိတ်ဆက်မှု (Supabase သုံးရန်)
-db_url = os.environ.get('DATABASE_URL')
-if db_url:
-    if db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
-    
-    # SSL mode ထည့်သွင်းခြင်း (ဒါမှ Supabase နဲ့ ချိတ်တာ ပိုစင်မှာပါ)
-    if "?" not in db_url:
-        db_url += "?sslmode=require"
-        
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+# Render ရဲ့ Env Variables ထဲမှာ MONGO_URI ဆိုပြီး Link ကို ထည့်ပေးထားရပါမယ်
+app.config["MONGO_URI"] = os.environ.get('MONGO_URI')
+mongo = PyMongo(app)
 
-# Upload folder မရှိရင် ဆောက်ပေးမယ်
+# Upload folder မရှိရင် ဆောက်မယ်
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
-db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
-socketio = SocketIO(app, cors_allowed_origins="*", max_http_buffer_size=10 * 1024 * 1024)
 
-online_users = {}
-
-class User(UserMixin, db.Model):
-    __tablename__ = 'user'
-    id = db.Column(db.Integer, primary_key=True)
-    phone = db.Column(db.String(20), unique=True, nullable=False)
-    username = db.Column(db.String(50), nullable=False)
+# User Class for MongoDB
+class User(UserMixin):
+    def __init__(self, user_data):
+        self.id = str(user_data['_id'])
+        self.username = user_data['username']
+        self.phone = user_data['phone']
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    if not user_id: return None
+    user_data = mongo.db.users.find_one({"_id": ObjectId(user_id)})
+    return User(user_data) if user_data else None
 
+# Routes
 @app.route('/')
 @login_required
 def index():
@@ -56,11 +47,11 @@ def index():
 def login():
     if request.method == 'POST':
         phone = request.form.get('phone')
-        user = User.query.filter_by(phone=phone).first()
-        if user:
-            login_user(user)
+        user_data = mongo.db.users.find_one({"phone": phone})
+        if user_data:
+            login_user(User(user_data))
             return redirect(url_for('index'))
-        flash('ဖုန်းနံပါတ် ရှာမတွေ့ပါ။')
+        flash('ဖုန်းနံပါတ် မှားနေပါသည် သို့မဟုတ် Register အရင်လုပ်ပါ။')
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -68,12 +59,11 @@ def register():
     if request.method == 'POST':
         phone = request.form.get('phone')
         username = request.form.get('username')
-        if not User.query.filter_by(phone=phone).first():
-            new_user = User(phone=phone, username=username)
-            db.session.add(new_user)
-            db.session.commit()
-            login_user(new_user)
-            return redirect(url_for('index'))
+        if not mongo.db.users.find_one({"phone": phone}):
+            mongo.db.users.insert_one({"phone": phone, "username": username})
+            flash('Register လုပ်တာ အောင်မြင်ပါသည်။ Login ဝင်နိုင်ပါပြီ။')
+            return redirect(url_for('login'))
+        flash('ဒီဖုန်းနံပါတ် ရှိနှင့်ပြီးသားပါ။')
     return render_template('register.html')
 
 @app.route('/logout')
@@ -82,11 +72,8 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-@socketio.on('connect')
-def handle_connect():
-    if current_user.is_authenticated:
-        online_users[request.sid] = current_user.username
-        emit('user_list', list(set(online_users.values())), broadcast=True)
+# SocketIO Logic
+socketio = SocketIO(app, cors_allowed_origins="*", max_http_buffer_size=10 * 1024 * 1024)
 
 @socketio.on('message')
 def handle_message(data):
@@ -101,17 +88,14 @@ def handle_message(data):
 @socketio.on('file_upload')
 def handle_file(data):
     try:
-        f_name = data['filename']  # 'file' ဆိုတဲ့ နာမည်ကို ရှောင်ရန် f_name လို့ သုံးထားပါတယ်
+        f_name = data['filename']
         f_content = data['content']
         time_str = datetime.now().strftime("%I:%M %p")
-        
         header, encoded = f_content.split(",", 1)
         file_bytes = base64.b64decode(encoded)
-        
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], f_name)
         with open(filepath, "wb") as f:
             f.write(file_bytes)
-        
         file_url = url_for('static', filename='uploads/' + f_name)
         emit('message', {
             'user': current_user.username, 
@@ -124,6 +108,4 @@ def handle_file(data):
         print(f"Error: {e}")
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     socketio.run(app, host='0.0.0.0', port=10000)
