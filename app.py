@@ -13,22 +13,25 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mysecret123'
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static/uploads')
 
-# Render ရဲ့ Env Variables ထဲမှာ MONGO_URI ဆိုပြီး Link ကို ထည့်ပေးထားရပါမယ်
+# Render Variable ကို ဖတ်တဲ့အပိုင်း (Indentation မှန်အောင် သေချာကြည့်ပါ)
 mongo_uri = os.environ.get('MONGO_URI')
+
 if not mongo_uri:
-# Render မှာ variable မရှိရင် တက်မလာအောင် error message ထုတ်ခိုင်းမယ်
-raise ValueError("MONGO_URI is not set in Render Environment Variables")
-app.config["MONGO_URI"] = os.environ.get('MONGO_URI')
+    # Local မှာ စမ်းနေတာဆိုရင် ဒီအတိုင်း ပေးထားမယ်
+    app.config["MONGO_URI"] = "mongodb://localhost:27017/chat_app_db"
+else:
+    # Render ပေါ်ရောက်ရင် MONGO_URI ကို သုံးမယ်
+    app.config["MONGO_URI"] = mongo_uri
+
 mongo = PyMongo(app)
 
-# Upload folder မရှိရင် ဆောက်မယ်
+# Upload folder ရှိမရှိ စစ်မယ်
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# User Class for MongoDB
 class User(UserMixin):
     def __init__(self, user_data):
         self.id = str(user_data['_id'])
@@ -38,8 +41,11 @@ class User(UserMixin):
 @login_manager.user_loader
 def load_user(user_id):
     if not user_id: return None
-    user_data = mongo.db.users.find_one({"_id": ObjectId(user_id)})
-    return User(user_data) if user_data else None
+    try:
+        user_data = mongo.db.users.find_one({"_id": ObjectId(user_id)})
+        return User(user_data) if user_data else None
+    except:
+        return None
 
 # Routes
 @app.route('/')
@@ -65,7 +71,7 @@ def register():
         username = request.form.get('username')
         if not mongo.db.users.find_one({"phone": phone}):
             mongo.db.users.insert_one({"phone": phone, "username": username})
-            flash('Register လုပ်တာ အောင်မြင်ပါသည်။ Login ဝင်နိုင်ပါပြီ။')
+            flash('Register အောင်မြင်ပါသည်။ Login ဝင်နိုင်ပါပြီ။')
             return redirect(url_for('login'))
         flash('ဒီဖုန်းနံပါတ် ရှိနှင့်ပြီးသားပါ။')
     return render_template('register.html')
@@ -76,7 +82,6 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-# SocketIO Logic
 socketio = SocketIO(app, cors_allowed_origins="*", max_http_buffer_size=10 * 1024 * 1024)
 
 @socketio.on('message')
@@ -88,28 +93,6 @@ def handle_message(data):
         'time': time_str,
         'type': 'text'
     }, broadcast=True)
-
-@socketio.on('file_upload')
-def handle_file(data):
-    try:
-        f_name = data['filename']
-        f_content = data['content']
-        time_str = datetime.now().strftime("%I:%M %p")
-        header, encoded = f_content.split(",", 1)
-        file_bytes = base64.b64decode(encoded)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], f_name)
-        with open(filepath, "wb") as f:
-            f.write(file_bytes)
-        file_url = url_for('static', filename='uploads/' + f_name)
-        emit('message', {
-            'user': current_user.username, 
-            'message': file_url, 
-            'filename': f_name,
-            'time': time_str,
-            'type': 'file'
-        }, broadcast=True)
-    except Exception as e:
-        print(f"Error: {e}")
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=10000)
