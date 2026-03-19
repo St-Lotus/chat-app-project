@@ -47,6 +47,23 @@ def load_user(user_id):
     except:
         return None
 
+online_users = {}
+
+@socketio.on('connect')
+def handle_connect():
+    if current_user.is_authenticated:
+        # User ရဲ့ ID ကို key အဖြစ်သုံးပြီး username ကို သိမ်းမယ်
+        online_users[current_user.id] = current_user.username
+        # အားလုံးဆီ online user စာရင်း အသစ်ကို ပို့မယ်
+        emit('update_users', list(online_users.values()), broadcast=True)
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    if current_user.is_authenticated:
+        if current_user.id in online_users:
+            del online_users[current_user.id]
+        emit('update_users', list(online_users.values()), broadcast=True)        
+
 # Routes
 @app.route('/')
 @login_required
