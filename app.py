@@ -94,5 +94,34 @@ def handle_message(data):
         'type': 'text'
     }, broadcast=True)
 
+@socketio.on('file_upload')
+def handle_file(data):
+    try:
+        f_name = data['filename']
+        f_content = data['content'] # ဒါက base64 string ပါ
+        time_str = datetime.now().strftime("%I:%M %p")
+        
+        # Base64 string ကနေ အသားတင် data ကို ဖြတ်ယူတာပါ
+        header, encoded = f_content.split(",", 1)
+        file_bytes = base64.b64decode(encoded)
+        
+        # ဖိုင်သိမ်းမယ့် လမ်းကြောင်း
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], f_name)
+        with open(filepath, "wb") as f:
+            f.write(file_bytes)
+        
+        # အားလုံးဆီ ပြန်ပို့ပေးမယ့် URL
+        file_url = url_for('static', filename='uploads/' + f_name)
+        
+        emit('message', {
+            'user': current_user.username, 
+            'message': file_url, 
+            'filename': f_name,
+            'time': time_str,
+            'type': 'file'
+        }, broadcast=True)
+    except Exception as e:
+        print(f"File upload error: {e}")
+
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=10000)
