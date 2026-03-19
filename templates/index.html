@@ -99,19 +99,30 @@
         }
 
         function uploadFile() {
-            var file = document.getElementById('fileInput').files[0];
-            if (!file) return;
-            if (file.size > 5 * 1024 * 1024) { alert("File is too big (Max 5MB)"); return; }
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+    
+            if (file) {
+                // ဖိုင်ဆိုဒ် 5MB ထက်ကြီးရင် မပို့အောင် ကန့်သတ်တာပိုကောင်းပါတယ်
+                if (file.size > 5 * 1024 * 1024) {
+                    alert("ဖိုင်ဆိုဒ် အရမ်းကြီးနေပါတယ် (5MB အထိပဲ ရပါတယ်)");
+                    return;
+            }
 
-            var reader = new FileReader();
+            const reader = new FileReader();
             reader.onload = function(e) {
+                const rawData = e.target.result;
+                // Socket ကနေ ပုံဒေတာကို လှမ်းပို့မယ်
                 socket.emit('file_upload', {
                     filename: file.name,
-                    content: e.target.result
+                    content: rawData
                 });
+                // ပို့ပြီးရင် input ကို ပြန်ရှင်းမယ်
+                fileInput.value = '';
             };
             reader.readAsDataURL(file);
         }
+    }
     </script>
 </body>
 </html>
