@@ -31,8 +31,8 @@
 </head>
 <body>
     <div class="sidebar">
-        <div class="sidebar-header">Online Users</div>
-        <ul id="user-list"></ul>
+        <h3>Online Users</h3>
+        <div id="user-list"></div>
     </div>
     <div class="main-chat">
         <div class="header">
@@ -107,7 +107,7 @@
                 if (file.size > 5 * 1024 * 1024) {
                     alert("ဖိုင်ဆိုဒ် အရမ်းကြီးနေပါတယ် (5MB အထိပဲ ရပါတယ်)");
                     return;
-            }
+        }
 
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -122,6 +122,17 @@
             };
             reader.readAsDataURL(file);
         }
+        socket.on('update_users', function(users) {
+            const userList = document.getElementById('user-list'); // online user ပြမယ့် div id
+            userList.innerHTML = ''; // အဟောင်းတွေကို ရှင်းမယ်
+    
+            users.forEach(function(username) {
+                const div = document.createElement('div');
+                div.className = 'online-user-item'; // CSS ပုံစံသွင်းဖို့ class
+                div.innerHTML = `<span class="online-dot"></span> ${username}`;
+                userList.appendChild(div);
+            });
+        });    
     }
     </script>
 </body>
