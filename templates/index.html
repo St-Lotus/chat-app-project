@@ -27,18 +27,8 @@
         .attach-btn { font-size: 22px; cursor: pointer; color: #555; }
         .img-preview { max-width: 100%; border-radius: 5px; margin-top: 5px; cursor: pointer; }
         @media (max-width: 600px) { .sidebar { display: none; } }
-        .online-dot {
-            height: 10px;
-            width: 10px;
-            background-color: #4CAF50;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 5px;
-        }
-        .online-user-item {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-        }
+        .online-dot { height: 10px; width: 10px; background-color: #4CAF50; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .online-user-item { padding: 10px; border-bottom: 1px solid #eee; }
     </style>
 </head>
 <body>
@@ -145,18 +135,6 @@
             };
             reader.readAsDataURL(file);
         }
-        socket.on('update_users', function(users) {
-            const userList = document.getElementById('user-list'); // online user ပြမယ့် div id
-            userList.innerHTML = ''; // အဟောင်းတွေကို ရှင်းမယ်
-    
-            users.forEach(function(username) {
-                const div = document.createElement('div');
-                div.className = 'online-user-item'; // CSS ပုံစံသွင်းဖို့ class
-                div.innerHTML = `<span class="online-dot"></span> ${username}`;
-                userList.appendChild(div);
-            });
-        });    
-    }
     </script>
 </body>
 </html>
