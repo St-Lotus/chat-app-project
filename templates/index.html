@@ -62,6 +62,17 @@
             document.getElementById('user-list').innerHTML = users.map(u => `<li>${u}</li>`).join('');
         });
 
+        socket.on('update_users', function(users) {
+            const userList = document.getElementById('user-list'); // online user ပြမယ့် div id
+            userList.innerHTML = ''; // အဟောင်းတွေကို ရှင်းမယ်
+    
+            users.forEach(function(username) {
+            const div = document.createElement('div');
+                div.className = 'online-user-item'; // CSS ပုံစံသွင်းဖို့ class
+                div.innerHTML = `<span class="online-dot"></span> ${username}`;
+                userList.appendChild(div);
+            });
+        });
         socket.on('message', function(data) {
             var chat = document.getElementById('chat');
             var div = document.createElement('div');
