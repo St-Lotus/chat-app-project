@@ -60,9 +60,8 @@ def handle_connect():
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    if current_user.is_authenticated:
-        if current_user.id in online_users:
-            del online_users[current_user.id]
+    if current_user.id in online_users:
+        del online_users[current_user.id]
         emit('update_users', list(online_users.values()), broadcast=True)        
 
 # Routes
