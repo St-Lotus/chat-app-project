@@ -99,7 +99,7 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-socketio = SocketIO(app, cors_allowed_origins="*", max_http_buffer_size=10 * 1024 * 1024)
+socketio = socketio(app, cors_allowed_origins="*", max_http_buffer_size=10 * 1024 * 1024)
 
 @socketio.on('message')
 def handle_message(data):
