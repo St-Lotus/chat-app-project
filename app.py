@@ -13,6 +13,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mysecret123'
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static/uploads')
 
+socketio = SocketIO(app, cors_allowed_origins="*", max_http_buffer_size=10 * 1024 * 1024)
 # Render Variable ကို ဖတ်တဲ့အပိုင်း (Indentation မှန်အောင် သေချာကြည့်ပါ)
 mongo_uri = os.environ.get('MONGO_URI')
 
@@ -99,7 +100,7 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-socketio = SocketIO(app, cors_allowed_origins="*", max_http_buffer_size=10 * 1024 * 1024)
+
 
 @socketio.on('message')
 def handle_message(data):
