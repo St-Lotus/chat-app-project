@@ -99,7 +99,7 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-socketio = socketio(app, cors_allowed_origins="*", max_http_buffer_size=10 * 1024 * 1024)
+socketio = SocketIO(app, cors_allowed_origins="*", max_http_buffer_size=10 * 1024 * 1024)
 
 @socketio.on('message')
 def handle_message(data):
@@ -138,7 +138,7 @@ def handle_file(data):
             'type': 'file'
         }, broadcast=True)
     except Exception as e:
-        print(f"File upload error: {e}")
+        print(f"Error: {e}")
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=10000)
