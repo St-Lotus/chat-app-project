@@ -65,17 +65,13 @@
         });
 
         socket.on('update_users', function(users) {
-            const userList = document.getElementById('user-list'); // online user ပြမယ့် div id
-            if (userList) {
-                userList.innerHTML = ''; // အဟောင်းတွေကို ရှင်းမယ်
-                users.forEach(function(username) {
-                    const div = document.createElement('div');
-                    div.style.padding = "10px";
-                    div.style.borderBottom = "1px solid #eee";
-                    div.innerHTML = `<span style="color: #4CAF50;">●</span> ${username}`;
-                    userList.appendChild(div);
+            var userList = document.getElementById('user-list');
+            if(userList) {
+                userList.innerHTML = '';
+                users.forEach(function(u) {
+                    userList.innerHTML += `<div><span style="color:green">●</span> ${u}</div>`;
                 });
-            }                
+            }
         });
         socket.on('message', function(data) {
             var chat = document.getElementById('chat');
@@ -102,10 +98,10 @@
         });
 
         function sendMessage() {
-            var input = document.getElementById('message');
-            if(input.value.trim()) {
-                socket.emit('message', {message: input.value});
-                input.value = '';
+            var msg = document.getElementById('messageInput').value;
+            if(msg.trim() != "") {
+                socket.emit('message', { 'message': msg }); // Server က 'message' event ကို လှမ်းခေါ်တာ
+                document.getElementById('messageInput').value = '';
             }
         }
 
